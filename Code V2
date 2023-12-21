@@ -1,0 +1,100 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"path/filepath"
+	"strings"
+
+	"github.com/Kagami/go-face"
+)
+
+const dataDirImages = "testdata/images"
+const dataDirModels = "testdata/models"
+
+var photosBase = []string{"pierre.jpg", "mohammed.jpg"}
+var photosComparees = []string{"groupe.jpg"}
+
+func main() {
+
+	fmt.Println("Reconnaissance 3000")
+
+	//////////////////////////////////////////////////////
+	//
+	// ON INITIALISE LE RECONNAISSEUR GRACE AUX MODELES
+	//
+	//////////////////////////////////////////////////////
+
+	rec, err := face.NewRecognizer(dataDirModels)
+	if err != nil {
+		fmt.Println("Cannot initialize recognizer")
+	}
+	defer rec.Close()
+	fmt.Println("Recognizer Initialized")
+
+	/////////////////////////////////////////////////////
+	//
+	// ON ANALYSE LES VISAGES DE PIERRE ET MOHAMMED
+	//
+	/////////////////////////////////////////////////////
+
+	pierreImage := filepath.Join(dataDirImages, "pierre.jpg")
+	pierre, err := rec.RecognizeSingleFile(pierreImage)
+	if err != nil {
+		log.Fatalf("Can't recognize: %v", err)
+	}
+
+	mohammedImage := filepath.Join(dataDirImages, "mohammed.jpg")
+	mohammed, err := rec.RecognizeSingleFile(mohammedImage)
+	if err != nil {
+		log.Fatalf("Can't recognize: %v", err)
+	}
+
+	/////////////////////////////////////////////////////
+
+	samples := []face.Descriptor{mohammed.Descriptor, pierre.Descriptor}
+	labels := []string{"Mohammed", "Pierre"}
+	avengers := []int32{0, 1}
+
+	/*labelz := initLabels(photosBase)
+
+	fmt.Println(labelz)*/
+
+	rec.SetSamples(samples, avengers)
+
+	////////////////////////////////////////////////////////
+	//
+	// ON COMPARE LES VISAGES D'UNE PHOTO A NOS SAMPLES
+	//
+	////////////////////////////////////////////////////////
+	imageComparee := filepath.Join(dataDirImages, "groupe.jpg")
+	visageCompare, err := rec.RecognizeFile(imageComparee)
+	if err != nil {
+		log.Fatalf("Can't recognize: %v", err)
+	}
+	if visageCompare == nil {
+		log.Fatalf("Not a single face on the image")
+	}
+	for i, f := range visageCompare {
+		fmt.Println(i)
+		IDVisage := rec.ClassifyThreshold(f.Descriptor, 0.6)
+		if IDVisage < 0 {
+			fmt.Println("Ne peut pas classifier")
+		} else {
+			fmt.Println(labels[IDVisage])
+		}
+
+	}
+
+	////////////////////////////////////////////////////////////
+
+}
+
+func initLabels(photosBase []string) []string {
+	var labels []string
+	for _, photo := range photosBase {
+		temp := strings.TrimSuffix(photo, ".jpg")
+		labels = append(labels, temp)
+	}
+	return (labels)
+}
